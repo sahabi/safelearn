@@ -12,13 +12,16 @@ class deepQNetwork:
     def __init__(self, learningRate, noOfStateVariables, noOfActions):
         self.model = Sequential()
         self.model.add(Dense(1, input_dim=noOfStateVariables))
-        self.model.add(Dense(400, activation='relu'))
-        self.model.add(Dense(300, activation='relu'))
+        # self.model.add(Dense(4, activation='relu'))
+        # self.model.add(Dense(4, activation='relu'))
         self.model.add(Dense(noOfActions,activation='linear')) 
         self.model.compile(lr=learningRate, optimizer='rmsprop', loss='mse')
 
     def predict(self, states):        
         return self.model.predict(states,batch_size=1)
+
+    def predict_all(self, states):        
+        return self.model.predict(states, batch_size=32)
     
     def fit(self, states, targets):
         self.model.fit(states, targets, verbose=False)

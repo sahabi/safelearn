@@ -47,6 +47,4 @@ class agent:
         targets.resize((i+1,len(self.actions)))
 
         # and finally we pass this to the Q function for fitting
-        # print 'states\n',states
-        # print 'targets\n',targets
         self.Q.fit(states, targets)

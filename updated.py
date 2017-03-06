@@ -26,17 +26,16 @@ avgreward = deque([],100)
 trials = 10000
 for i_episode in range(trials):
     
-    S = env.reset()
+    S = env.reset(blob.Q, t)
 
     done = False   
     t = 0
-    tot_R = 0
-    
+    tot_R = 0  
     while not done:
         t += 1
         A = blob.act(S)
         S_dash, R, done = env.step(A)
-        
+       
         blob.observe(S,A,R,S_dash)
         tot_R += R
         

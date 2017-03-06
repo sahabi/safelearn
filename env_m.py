@@ -21,7 +21,11 @@ class Env(object):
         self.MAGNIFY = 2
         self.NOFPIXELSPLITS = 16
         # Obstacle definitions
-        self.OBSTACLES = [(230,100,250,350)]
+        obstacle_x_min = 230
+        obstacle_y_min = 130
+        obstacle_x_max = 250
+        obstacle_y_max = 150
+        self.OBSTACLES = [(obstacle_x_min,obstacle_y_min,obstacle_x_max,obstacle_y_max)]
         self.obstaclePixels = [[False for i in range(0,self.YSIZE)] for j in range(0,self.XSIZE)]
         for (a,b,c,d) in self.OBSTACLES:
             for i in range(a,c):
@@ -29,7 +33,7 @@ class Env(object):
                     self.obstaclePixels[i][j] = True
         self.CRASH_COST = 1
         self.GOAL_LINE_REWARD = 1
-        self.TRAIN_EVERY_NTH_STEP = 4
+        self.TRAIN_EVERY_NTH_STEP = 8
         # Prepare screen
         self.screen = pygame.display.set_mode((self.XSIZE,self.YSIZE))
         pygame.display.set_caption('Learning Visualizer')
@@ -48,47 +52,73 @@ class Env(object):
         self.currentRotationPerStep = 0.04
         # There are multiple view of the window. Here, we store the current state
         self.displayBufferEmpty = True
-        isLearning = True
+        self.isLearning = True
         self.clock = pygame.time.Clock()
         self.usedfont = pygame.font.SysFont("monospace", 15)
 
-        self.allPixelsDS = [[SupervisedDataSet(4, 8) for i in range(0,self.NOFPIXELSPLITS)] for i in xrange(0,8)]
+        self.allPixelsDS = [[np.array([]) for i in range(0,self.NOFPIXELSPLITS)] for i in xrange(0,8)]
         pixels = []
+
+        for x in range(0,self.XSIZE/self.MAGNIFY):
+            for y in range(0,self.YSIZE/self.MAGNIFY):
+                if not self.obstaclePixels[x*self.MAGNIFY][y*self.MAGNIFY]:
+                    pixels.append((float(x)*self.MAGNIFY/self.XSIZE,float(y)*self.MAGNIFY/self.YSIZE))
+        random.shuffle(pixels)
+
+
         for i in range(0,self.NOFPIXELSPLITS):
             thisChunk = len(pixels)/(self.NOFPIXELSPLITS-i)
             for j in range(0,thisChunk):
                 for k in range(0,8):
-                    self.allPixelsDS[k][i].addSample((pixels[j][0],pixels[j][1],math.sin(k*0.25*math.pi),math.cos(k*0.25*math.pi)),(0,0,0,0,0,0,0,0))
+                    a = np.array([pixels[j][0],pixels[j][1],math.sin(k*0.25*math.pi),math.cos(k*0.25*math.pi)])
+                    #a = np.array([pixels[j][0],pixels[j][1]])
+                    b = self.allPixelsDS[k][i]
+                    if b.shape[0] == 0:
+                        self.allPixelsDS[k][i] = a
+                    else:
+                        self.allPixelsDS[k][i] = np.vstack((a,b))
             pixels = pixels[thisChunk:]
-
         self.displayDirection = 0
         self.iteration = 0
-
-        for x in range(230,250):
-            for y in range(100,350):
+        #print self.allPixelsDS
+        for x in range(obstacle_x_min,obstacle_x_max):
+            for y in range(obstacle_y_min,obstacle_y_max):
                 self.screenBuffer.set_at((x,y),(0,0,0))
 
-    def reset(self):
+    def reset(self,net,iteration):
         #self.currentPos = (400.0,400.0)
-        self.currentPos = (random.uniform(.5, 1)*self.XSIZE,random.random()*self.YSIZE)
-        #self.currentDir = 0.0
-        currentDir = random.random()*math.pi*2
+        self.currentPos = (random.uniform(0,1)*self.XSIZE,random.uniform(0,1)*self.YSIZE)
+        self.currentDir = 5
         self.currentSpeedPerStep = 1.0
         self.currentRotationPerStep = 0.04
         self.iteration += 1
-
+#(x,y,direcSin,direcCos)
         if pygame.display.get_active():
             color = (255*0/8.0,0,0)
-            for i,((x,y,direcSin,direcCos),j) in enumerate(self.allPixelsDS[self.displayDirection][self.iteration % self.NOFPIXELSPLITS]):
-                if x in range(230,250):
-                    color = (255,255,255)
-                else:
-                    olor = (255*0/8.0,0,0)
-                #self.predictionBuffer.set_at((int(round(x*self.XSIZE/self.MAGNIFY)), int(round(y*self.YSIZE/self.MAGNIFY))), color)  
-                self.predictionBuffer.set_at((x,y),color)
+            allActivations = net.predict_all(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS])
+            for i,(x,y,direcSin,direcCos) in enumerate(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS]):
+            #for i,(x,y) in enumerate(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS]):      
+                arg = argmax(allActivations[i])
+                if arg == 7:
+                    color = (0,40,0) #dark blue
+                if arg == 6:
+                    color = (0,122,0) #blue
+                if arg == 5:
+                    color = (0,255,0) #light blue
+                if arg == 4:
+                    color = (255,255,255) #white
+                elif arg == 3:
+                    color = (255,0,0) #light red
+                elif arg == 2:
+                    color = (122,0,0) #red
+                elif arg == 1:
+                    color = (40,0,0) #dark red
+                elif arg == 0:
+                    color = (0,0,0) #black
+                self.predictionBuffer.set_at((int(round(x*self.XSIZE/self.MAGNIFY)), int(round(y*self.YSIZE/self.MAGNIFY))), color)
             # Scale up the "predictionBuffer"
             self.screenBuffer.blit(pygame.transform.smoothscale(self.predictionBuffer, (self.XSIZE, self.YSIZE)),(0,0))
-            label = self.usedfont.render("Best action, dir: "", learning: ", 1, (255,255,0))
+            label = self.usedfont.render("Best action, dir: "+str(self.displayDirection)+", learning: ", 1, (255,255,0))
             self.screenBuffer.blit(label, (1, 1))
             self.displayBufferEmpty = False
         else:
@@ -96,26 +126,35 @@ class Env(object):
                 # When the buffer comes back up, we don't want 
                 self.predictionBuffer.fill((64, 64, 64))
                 self.displayBufferEmpty = True       
-        # ====================================
-        # Now simulate the car
+
         # ====================================
         # Draw origin of the motion
-        pygame.draw.line(self.screenBuffer,(0,255,255),(self.currentPos[0]-2,self.currentPos[1]-2),(self.currentPos[0]+2,self.currentPos[1]+2))
-        pygame.draw.line(self.screenBuffer,(0,255,255),(self.currentPos[0]+2,self.currentPos[1]-2),(self.currentPos[0]-2,self.currentPos[1]+2))  
+        pygame.draw.line(self.screenBuffer,(0,0,255),(self.currentPos[0]-2,self.currentPos[1]-2),(self.currentPos[0]+2,self.currentPos[1]+2),3)
+        pygame.draw.line(self.screenBuffer,(0,0,255),(self.currentPos[0]+2,self.currentPos[1]-2),(self.currentPos[0]-2,self.currentPos[1]+2),3)  
+
+        for event in pygame.event.get():
+                    
+            if event.type == pygame.locals.QUIT or (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_ESCAPE):           
+                sys.exit(0)
+            if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_SPACE):
+                self.displayQValue = not self.displayQValue            
+            if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_l):
+                self.isLearning = not self.isLearning
+            if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_RIGHT):
+                #print self.displayDirection
+                self.displayDirection = (self.displayDirection + 1) % 8
+            if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_LEFT):
+                self.displayDirection = (self.displayDirection + 7) % 8
 
         return np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE, math.sin(self.currentDir*0.25*math.pi)\
             ,math.cos(self.currentDir*0.25*math.pi)])       
-
+        #return np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE])   
     def step(self, action):
 
         targetDirDiscrete = action
         targetDir = targetDirDiscrete*math.pi*2/8.0
         stepStartingPos = self.currentPos
-        for x in range(230,250):
-            for y in range(100,350):
-                self.screenBuffer.set_at((x,y),(0,0,0))
 
-        
         # Simulate the cars for some steps. Also draw the trajectory of the car.
         for i in range(0,self.TRAIN_EVERY_NTH_STEP):
             if (self.currentDir>math.pi*2):
@@ -126,12 +165,8 @@ class Env(object):
                 self.currentDir = min(targetDir,self.currentDir+self.currentRotationPerStep)
             self.oldPos = self.currentPos
             self.currentPos = (self.currentPos[0]+self.currentSpeedPerStep*math.sin(self.currentDir),self.currentPos[1]+self.currentSpeedPerStep*math.cos(self.currentDir))
-            pygame.draw.line(self.screenBuffer,(0,255,255),self.oldPos,self.currentPos)
+            pygame.draw.line(self.screenBuffer,(0,0,255),self.oldPos,self.currentPos,3)
 
-        # print self.currentPos[0]
-        # print self.currentPos[1]
-        # print stepStartingPos[0]
-        # print self.obstaclePixels[int(self.currentPos[0])][int(self.currentPos[1])]
         if (self.currentPos[0]>=self.XSIZE) or (self.currentPos[0]<0) or (self.currentPos[1]>=self.YSIZE) or (self.currentPos[1]<0):
             self.currentPos = (random.random()*self.XSIZE,random.random()*self.YSIZE)
             self.currentDir = random.random()*math.pi*2
@@ -143,16 +178,18 @@ class Env(object):
             R = -1*self.CRASH_COST
             done = True            
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)) or ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
-            R = self.GOAL_LINE_REWARD*10
-            print "GOAL!!"
+            R = self.GOAL_LINE_REWARD*1
+            done = True
+        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)) or ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
+            R = self.GOAL_LINE_REWARD*1
             done = True
         else:
             R = 0.00
             done = False
 
         S_dash = np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE,math.sin(self.currentDir*0.25*math.pi),math.cos(self.currentDir*0.25*math.pi)])
+        #S_dash = np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE])
         if pygame.display.get_active():        
-            #self.clock.tick(2)
             self.screen.blit(self.screenBuffer, (0, 0))
             pygame.display.flip()
         return (S_dash, R, done)
