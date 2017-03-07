@@ -12,8 +12,9 @@ class deepQNetwork:
     def __init__(self, learningRate, noOfStateVariables, noOfActions):
         self.model = Sequential()
         self.model.add(Dense(1, input_dim=noOfStateVariables))
-        # self.model.add(Dense(4, activation='relu'))
-        # self.model.add(Dense(4, activation='relu'))
+        self.model.add(Activation('relu'))
+        self.model.add(Dense(40, activation='relu'))
+        self.model.add(Dense(40, activation='relu'))
         self.model.add(Dense(noOfActions,activation='linear')) 
         self.model.compile(lr=learningRate, optimizer='rmsprop', loss='mse')
 

@@ -6,15 +6,23 @@ from policy import eGreedy
 from value_function import deepQNetwork
 from experience_replay import experienceReplay, memoryNode
 import numpy as np
-
+def argmax(b):
+    maxVal = None
+    maxData = None
+    for i,a in enumerate(b):
+        if a>maxVal:
+            maxVal = a
+            maxData = i
+    return maxData
 class agent:
     
-    def __init__(self, stateDim, actions, learningRate=0.01, gamma=0.99, epsilon=0.1, memorySize=100000):
+    def __init__(self, stateDim, actions, learningRate=0.05, gamma=0.99, epsilon=1, memorySize=150000):
         self.gamma = gamma
         self.stateDim = stateDim
         self.actions = actions
         self.policy = eGreedy(epsilon)
         self.Q = deepQNetwork(learningRate, stateDim, len(actions))
+        self.Q_est = deepQNetwork(learningRate, stateDim, len(actions))
         self.experience = experienceReplay(memorySize)
         
     def act(self,state):
@@ -24,21 +32,20 @@ class agent:
         self.experience.remember(state, action, reward, nextState)
 
     # By which I mean run through some experience and update the Q function accordingly
-    def reflect(self, batchSize=100):
+    def reflect(self, iteration, batchSize=100):
         targets = np.zeros((batchSize,len(self.actions)))
         states = np.zeros((batchSize,self.stateDim))
                         
         for (i, memory) in enumerate(self.experience.recall(batchSize)):
     
-            targets[i] = self.Q.predict(memory.S[np.newaxis])
+            targets[i] = self.Q_est.predict(memory.S[np.newaxis])
     
             # if the agent moves to the terminal state then the return is exactly the reward
             if memory.next.S is None:
                 targets[i,memory.A] = memory.R
-
             # otherwise we bootstrap the return by observing the current reward and adding it to the value of the next state-greedy action 
             else:
-                targets[i,memory.A] = memory.R + self.gamma * np.max(self.Q.predict(memory.next.S[np.newaxis]))
+                targets[i,memory.A] = memory.R + self.gamma * self.Q_est.predict(memory.next.S[np.newaxis])[0][argmax(self.Q.predict(memory.next.S[np.newaxis])[0])]
             
             states[i] = memory.S
                   
@@ -48,3 +55,6 @@ class agent:
 
         # and finally we pass this to the Q function for fitting
         self.Q.fit(states, targets)
+        if iteration % 4 == 1:
+            weights = self.Q.model.get_weights()#: returns a list of all weight tensors in the model, as Numpy arrays.
+            self.Q_est.model.set_weights(weights)

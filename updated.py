@@ -12,22 +12,44 @@ import env_m
 #from gym import wrappers
 import numpy as np
 from agent import agent
+import matplotlib
+matplotlib.use('GTKAgg')
+from matplotlib import pyplot as plt
 
 LEFT = 0
 RIGHT = 1
 MAX_TIMESTEPS = 500
 
-blob = agent(4,[i for i in range(0,8)], epsilon=0.05)
+blob = agent(4,[i for i in range(0,8)], epsilon=1)
 env = env_m.Env()
 #env = wrappers.Monitor(env, '/tmp/cartpole-experiment-v1',force=True)
 
 t = 0
 avgreward = deque([],100)
 trials = 10000
+fig, ax = plt.subplots(1, 1)
+ax.set_aspect('auto')
+ax.set_xlim(0, 5000)
+ax.set_ylim(-1, 1)
+ax.hold(True)
+x = deque([],500)
+x.append(0)
+y = deque([],500)
+y.append(-1)
+
+plt.show(False)
+plt.draw()
+maxsofar = -1
+max_, = ax.plot((0, 5000), (maxsofar, maxsofar), 'k-')
+if True:
+    # cache the background
+    background = fig.canvas.copy_from_bbox(ax.bbox)
+
+points = ax.plot(x, y, 'o')[0]
+
 for i_episode in range(trials):
     
-    S = env.reset(blob.Q, t)
-
+    S = env.reset(blob.Q_est, t)
     done = False   
     t = 0
     tot_R = 0  
@@ -35,14 +57,12 @@ for i_episode in range(trials):
         t += 1
         A = blob.act(S)
         S_dash, R, done = env.step(A)
-       
         blob.observe(S,A,R,S_dash)
         tot_R += R
-        
         S = np.copy(S_dash)
         
     # every now and then stop, and think things through:
-    blob.reflect()
+    blob.reflect(i_episode)
         
     # when the episode ends the agent will have hit a terminal state so give it a zero reward
     if t < MAX_TIMESTEPS:
@@ -51,7 +71,30 @@ for i_episode in range(trials):
         blob.observe(S,A,1.,None)
             
     avgreward.append(tot_R)
-    
-    print("episode: {}, average reward: {}, Reward: {}".format(i_episode,np.mean(avgreward),tot_R))
+        # update the xy data
+    x.append(i_episode)
+    y.append(np.mean(avgreward))
+    points.set_data(x, y)
+    maxsofar = max(maxsofar,np.mean(avgreward))
 
-env.close() 
+    if True:
+        # restore background
+        plt.pause(0.05)
+        fig.canvas.restore_region(background)
+        ax.set_xlim(max(i_episode-500,0), i_episode+100)
+        ax.set_ylim(-1, 1)
+        rand = plt.plot((0, trials), (-.75, -.75), 'k-')
+        max_.remove()
+        max_, = ax.plot((0, trials), (maxsofar, maxsofar), 'k-')
+        # redraw just the points
+        ax.draw_artist(points)
+        # fill in the axes rectangle
+        fig.canvas.blit(ax.bbox)
+    else:
+        # redraw everything
+        fig.canvas.draw()
+
+
+    print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {}, Max: {}".format(i_episode,np.mean(avgreward),tot_R, len(blob.experience.buffer), blob.experience.bufferSize, blob.policy.epsilon,maxsofar))
+plt.close(fig)
+env.close()

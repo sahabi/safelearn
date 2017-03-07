@@ -29,6 +29,7 @@ class experienceReplay:
     
     def __init__(self,bufferSize):
         self.buffer = deque([],bufferSize)
+        self.bufferSize = bufferSize
 
     def recall(self,batchSize=32):
         j = 0
