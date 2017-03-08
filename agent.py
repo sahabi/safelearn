@@ -36,7 +36,7 @@ class agent:
         targets = np.zeros((batchSize,len(self.actions)))
         states = np.zeros((batchSize,self.stateDim))
                         
-        for (i, memory) in enumerate(self.experience.recall(batchSize)):
+        for (i, memory) in enumerate(self.experience.recall(self.Q, self.Q_est, batchSize)):
     
             targets[i] = self.Q_est.predict(memory.S[np.newaxis])
     
@@ -46,7 +46,6 @@ class agent:
             # otherwise we bootstrap the return by observing the current reward and adding it to the value of the next state-greedy action 
             else:
                 targets[i,memory.A] = memory.R + self.gamma * self.Q_est.predict(memory.next.S[np.newaxis])[0][argmax(self.Q.predict(memory.next.S[np.newaxis])[0])]
-            
             states[i] = memory.S
                   
         # in case the experience replay wasn't able to serve up enough memories, we need to trim the matrices                  
@@ -54,7 +53,6 @@ class agent:
         targets.resize((i+1,len(self.actions)))
 
         # and finally we pass this to the Q function for fitting
-        print states.shape
         self.Q.fit(states, targets)
         if iteration % 4 == 1:
             weights = self.Q.model.get_weights()#: returns a list of all weight tensors in the model, as Numpy arrays.

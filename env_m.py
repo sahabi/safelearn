@@ -34,7 +34,7 @@ class Env(object):
                     self.obstaclePixels[i][j] = True
         self.CRASH_COST = 1
         self.GOAL_LINE_REWARD = 1
-        self.TRAIN_EVERY_NTH_STEP = 1
+        self.TRAIN_EVERY_NTH_STEP = 8
         self.currentPos = (100.0,100.0)
         self.currentDir = random.random()*math.pi*2
         self.currentSpeedPerStep = 1.0
