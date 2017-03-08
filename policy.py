@@ -7,7 +7,7 @@ import random as rnd
 
 class eGreedy:
     
-    def __init__(self, eExplore = 0.1, eExploit = 0.05, decay=0.0005):
+    def __init__(self, eExplore = 0.1, eExploit = 0.05, decay=0.0001):
         self.epsilon = eExplore
         self.eExploit = eExploit
         self.decay = decay

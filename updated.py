@@ -13,8 +13,9 @@ import env_m
 import numpy as np
 from agent import agent
 import matplotlib
-matplotlib.use('GTKAgg')
+matplotlib.use('WXAgg')
 from matplotlib import pyplot as plt
+from dialogue import Widget
 
 LEFT = 0
 RIGHT = 1
@@ -23,14 +24,16 @@ MAX_TIMESTEPS = 500
 blob = agent(4,[i for i in range(0,8)], epsilon=1)
 env = env_m.Env()
 #env = wrappers.Monitor(env, '/tmp/cartpole-experiment-v1',force=True)
-
+notify_value = -1
 t = 0
 avgreward = deque([],100)
 trials = 10000
 fig, ax = plt.subplots(1, 1)
 ax.set_aspect('auto')
 ax.set_xlim(0, 5000)
-ax.set_ylim(-1, 1)
+ax.set_ylim(-2, 2)
+ax.set_ylabel('Rewards')
+ax.set_xlabel('Episodes')
 ax.hold(True)
 x = deque([],500)
 x.append(0)
@@ -39,8 +42,9 @@ y.append(-1)
 
 plt.show(False)
 plt.draw()
-maxsofar = -1
+maxsofar = -2
 max_, = ax.plot((0, 5000), (maxsofar, maxsofar), 'k-')
+thresh, = ax.plot((0, 5000), (notify_value, notify_value), 'k-') 
 if True:
     # cache the background
     background = fig.canvas.copy_from_bbox(ax.bbox)
@@ -75,17 +79,20 @@ for i_episode in range(trials):
     x.append(i_episode)
     y.append(np.mean(avgreward))
     points.set_data(x, y)
-    maxsofar = max(maxsofar,np.mean(avgreward))
+    if len(avgreward) > 10:
+        maxsofar = max(maxsofar,np.mean(avgreward))
 
     if True:
         # restore background
         plt.pause(0.05)
         fig.canvas.restore_region(background)
         ax.set_xlim(max(i_episode-500,0), i_episode+100)
-        ax.set_ylim(-1, 1)
+        ax.set_ylim(-2, 2)
         rand = plt.plot((0, trials), (-.75, -.75), 'k-')
         max_.remove()
-        max_, = ax.plot((0, trials), (maxsofar, maxsofar), 'k-')
+        max_, = ax.plot((0, trials), (maxsofar, maxsofar), 'k-', color = 'g')
+        thresh.remove()
+        thresh, = ax.plot((0, trials), (notify_value, notify_value), 'k-', color = 'r')
         # redraw just the points
         ax.draw_artist(points)
         # fill in the axes rectangle
@@ -93,8 +100,11 @@ for i_episode in range(trials):
     else:
         # redraw everything
         fig.canvas.draw()
-
-
+    if maxsofar >= notify_value and len(avgreward) == 100:
+        title = "{} Reached".format(notify_value)
+        w = Widget(notify_value)
+        w.root.mainloop()
+        notify_value = w.avg
     print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {}, Max: {}".format(i_episode,np.mean(avgreward),tot_R, len(blob.experience.buffer), blob.experience.bufferSize, blob.policy.epsilon,maxsofar))
 plt.close(fig)
 env.close()

@@ -34,7 +34,7 @@ class Env(object):
                     self.obstaclePixels[i][j] = True
         self.CRASH_COST = 1
         self.GOAL_LINE_REWARD = 1
-        self.TRAIN_EVERY_NTH_STEP = 8
+        self.TRAIN_EVERY_NTH_STEP = 1
         self.currentPos = (100.0,100.0)
         self.currentDir = random.random()*math.pi*2
         self.currentSpeedPerStep = 1.0
@@ -86,8 +86,8 @@ class Env(object):
         #print self.allPixelsDS
     def reset(self,net,iteration):
         #self.currentPos = (400.0,400.0)
-        self.currentPos = (random.uniform(.5,1)*self.XSIZE,random.random()*self.YSIZE)
-        self.currentDir = random.random()*math.pi*2
+        self.currentPos = (.25*self.XSIZE,.15*self.YSIZE)
+        self.currentDir = math.pi*.5
         self.currentSpeedPerStep = 1.0
         self.currentRotationPerStep = 0.04
         self.iteration += 1
@@ -160,30 +160,56 @@ class Env(object):
         for i in range(0,self.TRAIN_EVERY_NTH_STEP):
             if (self.currentDir>math.pi*2):
                 self.currentDir -= 2*math.pi
+            elif (self.currentDir<0):
+                self.currentDir += 2*math.pi
             if targetDir < self.currentDir:
-                self.currentDir = max(targetDir,self.currentDir-self.currentRotationPerStep)
+                if ((2*math.pi - self.currentDir) + targetDir) > (self.currentDir - targetDir):
+                    self.currentDir = max(targetDir,self.currentDir-self.currentRotationPerStep)
+                else:
+                    self.currentDir = max(targetDir,self.currentDir+self.currentRotationPerStep)
             else:
-                self.currentDir = min(targetDir,self.currentDir+self.currentRotationPerStep)
+                if ((2*math.pi - targetDir) + self.currentDir) > (targetDir - self.currentDir):
+                    self.currentDir = min(targetDir,self.currentDir+self.currentRotationPerStep)
+                else:
+                    self.currentDir = min(targetDir,self.currentDir-self.currentRotationPerStep)
+
             self.oldPos = self.currentPos
             self.currentPos = (self.currentPos[0]+self.currentSpeedPerStep*math.sin(self.currentDir),self.currentPos[1]+self.currentSpeedPerStep*math.cos(self.currentDir))
             
             if self.viz:
                 pygame.draw.line(self.screenBuffer,(0,0,255),self.oldPos,self.currentPos,3)
+        # hitting the border
+        bad = -1*self.CRASH_COST
+        good = self.GOAL_LINE_REWARD*1
 
         if (self.currentPos[0]>=self.XSIZE) or (self.currentPos[0]<0) or (self.currentPos[1]>=self.YSIZE) or (self.currentPos[1]<0):
-            R = -1*self.CRASH_COST
+            R = bad
             done = True
+        # hitting the obstacle
         elif self.obstaclePixels[int(self.currentPos[0])][int(self.currentPos[1])]:
-            R = -1*self.CRASH_COST
-            done = True            
-        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)) or ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
-            R = self.GOAL_LINE_REWARD*1
+            R = bad
+            done = True 
+        # passing below the obstacle from right to left           
+        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
+            R = good
             done = True
-        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)) or ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
-            R = self.GOAL_LINE_REWARD*1
+        # passing above the obstacle from right to left    
+        elif ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
+            R = bad
             done = True
+        # passing below the obstacle from left to right    
+        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
+            R = bad
+            done = True
+        # passing above the obstacle from left to right    
+        elif((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
+            R = 0.0
+            done = False
         else:
-            R = 0.00
+            if (self.currentPos[0]>self.XSIZE/2):
+                R = ((self.currentPos[1] - stepStartingPos[1])/self.YSIZE) + ((stepStartingPos[0]-self.currentPos[0])/self.XSIZE)
+            elif (self.currentPos[0]<self.XSIZE/2):
+                R = (stepStartingPos[1] - self.currentPos[1])/self.YSIZE
             done = False
 
         S_dash = np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE,math.sin(self.currentDir*0.25*math.pi),math.cos(self.currentDir*0.25*math.pi)])

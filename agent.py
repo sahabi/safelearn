@@ -32,7 +32,7 @@ class agent:
         self.experience.remember(state, action, reward, nextState)
 
     # By which I mean run through some experience and update the Q function accordingly
-    def reflect(self, iteration, batchSize=100):
+    def reflect(self, iteration, batchSize = 250):
         targets = np.zeros((batchSize,len(self.actions)))
         states = np.zeros((batchSize,self.stateDim))
                         
@@ -54,6 +54,7 @@ class agent:
         targets.resize((i+1,len(self.actions)))
 
         # and finally we pass this to the Q function for fitting
+        print states.shape
         self.Q.fit(states, targets)
         if iteration % 4 == 1:
             weights = self.Q.model.get_weights()#: returns a list of all weight tensors in the model, as Numpy arrays.
