@@ -210,6 +210,8 @@ class Env(object):
                 R = ((self.currentPos[1] - stepStartingPos[1])/self.YSIZE) + ((stepStartingPos[0]-self.currentPos[0])/self.XSIZE)
             elif (self.currentPos[0]<self.XSIZE/2):
                 R = (stepStartingPos[1] - self.currentPos[1])/self.YSIZE
+            else:
+                R = 0
             done = False
 
         S_dash = np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE,math.sin(self.currentDir*0.25*math.pi),math.cos(self.currentDir*0.25*math.pi)])
