@@ -9,10 +9,11 @@ from collections import deque
 import random as rnd
 
 class memoryNode:
-    def __init__(self, S = None, A = None, R = None, nextNode = None):
+    def __init__(self, S = None, A = None, R = None, nextNode = None, TD = 1):
         self.S = S
         self.A = A
         self.R = R
+        self.TD = TD
         self.next = nextNode
 
     def __str__(self):
@@ -30,10 +31,16 @@ class experienceReplay:
     def __init__(self,bufferSize):
         self.buffer = deque([],bufferSize)
         self.bufferSize = bufferSize
+        self.sum_p = 0
 
     def recall(self,batchSize=32):
         j = 0
-        idx = range(0,len(self.buffer)-1)
+        TDs = [(y,x.TD) for y,x in zip(range(0,len(self.buffer)-1),self.buffer)]
+        TDs.sort(key=lambda x: x[1], reverse=True)
+        #print TDs
+        #idx = range(0,len(self.buffer)-1)
+        idx = [x[0] for x in TDs]
+
         rnd.shuffle(idx)
         
         # for every shuffled id
@@ -41,6 +48,7 @@ class experienceReplay:
             
             # if the corresponding element has a nextState then yield it
             if self.buffer[i].next != None:
+                self.buffer[i].TD = 
                 yield self.buffer[i]
                 j += 1
                 
@@ -58,7 +66,9 @@ class experienceReplay:
         # fill in the remaining details for the current state
         self.buffer[-1].A = action
         self.buffer[-1].R = reward
+        self.buffer[-1].TD = max([x.TD for x in self.buffer])
         self.buffer[-1].next = memory
+        self.sum_p += self.buffer[-1].TD
         
         # append a new memory for the current state
         self.buffer.append(memory)

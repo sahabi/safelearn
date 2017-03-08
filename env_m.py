@@ -209,7 +209,7 @@ class Env(object):
             if (self.currentPos[0]>self.XSIZE/2):
                 R = ((self.currentPos[1] - stepStartingPos[1])/self.YSIZE) + ((stepStartingPos[0]-self.currentPos[0])/self.XSIZE)
             elif (self.currentPos[0]<self.XSIZE/2):
-                R = (stepStartingPos[1] - self.currentPos[1])/self.YSIZE
+                R = (stepStartingPos[1] - self.currentPos[1])/self.YSIZE + ((self.currentPos[0] - stepStartingPos[0])/self.XSIZE)
             else:
                 R = 0
             done = False
