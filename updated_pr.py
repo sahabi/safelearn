@@ -11,9 +11,9 @@ from collections import deque
 import env_m
 #from gym import wrappers
 import numpy as np
-from agent import agent
+from agent_pr import agent
 import matplotlib
-matplotlib.use('WXAgg')
+matplotlib.use('TKAgg')
 from matplotlib import pyplot as plt
 from dialogue import Widget
 
@@ -66,7 +66,8 @@ for i_episode in range(trials):
         S = np.copy(S_dash)
         
     # every now and then stop, and think things through:
-    blob.reflect(i_episode)
+    if i_episode > 20:
+        blob.reflect(i_episode)
         
     # when the episode ends the agent will have hit a terminal state so give it a zero reward
     if t < MAX_TIMESTEPS:
@@ -103,7 +104,9 @@ for i_episode in range(trials):
     if maxsofar >= notify_value and len(avgreward) == 100:
         title = "{} Reached".format(notify_value)
         # w = Widget(notify_value)
-        # notify_value = w.avg
-    print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {}, Max: {}".format(i_episode,np.mean(avgreward),tot_R, len(blob.experience.buffer), blob.experience.bufferSize, blob.policy.epsilon,maxsofar))
+        # w.root.mainloop()
+        # print('yo')
+        notify_value = float(input())
+    print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {}, Max: {}".format(i_episode,np.mean(avgreward),tot_R, len(blob.experience_pr._experience), 1, blob.policy.epsilon,maxsofar))
 plt.close(fig)
 env.close()

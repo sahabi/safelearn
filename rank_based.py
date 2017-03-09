@@ -10,7 +10,7 @@ import random
 import numpy as np
 
 import binary_heap
-xrange = range
+
 
 class Experience(object):
 
@@ -47,14 +47,14 @@ class Experience(object):
         n_partitions = self.partition_num
         partition_num = 1
         # each part size
-        partition_size = int(math.floor(self.size / n_partitions))
+        partition_size = math.floor(self.size / n_partitions)
 
-        for n in xrange(partition_size, self.size + 1, partition_size):
+        for n in range(partition_size, self.size + 1, partition_size):
             if self.learn_start <= n <= self.priority_size:
                 distribution = {}
                 # P(i) = (rank i) ^ (-alpha) / sum ((rank i) ^ (-alpha))
                 pdf = list(
-                    map(lambda x: math.pow(x, -self.alpha), xrange(1, n + 1))
+                    map(lambda x: math.pow(x, -self.alpha), range(1, n + 1))
                 )
                 pdf_sum = math.fsum(pdf)
                 distribution['pdf'] = list(map(lambda x: x / pdf_sum, pdf))
@@ -63,19 +63,20 @@ class Experience(object):
                 # strata_ends keep each segment start pos and end pos
                 cdf = np.cumsum(distribution['pdf'])
                 strata_ends = {1: 0, self.batch_size + 1: n}
-                step = 1 / float(self.batch_size)
+                step = 1 / self.batch_size
                 index = 1
-                for s in xrange(2, self.batch_size + 1):
+                for s in range(2, self.batch_size + 1):
                     while cdf[index] < step:
                         index += 1
                     strata_ends[s] = index
-                    step += 1 / float(self.batch_size)
+                    step += 1 / self.batch_size
 
                 distribution['strata_ends'] = strata_ends
 
                 res[partition_num] = distribution
 
             partition_num += 1
+        # print ('this:\n',res[1]['strata_ends'])
 
         return res
 
@@ -140,10 +141,10 @@ class Experience(object):
         :param delta: list of delta, order correspond to indices
         :return: None
         """
-        for i in xrange(0, len(indices)):
+        for i in range(0, len(indices)):
             self.priority_queue.update(math.fabs(delta[i]), indices[i])
 
-    def sample(self, global_step):
+    def sample(self, global_step=1):
         """
         sample a mini batch from experience replay
         :param global_step: now training step
@@ -156,16 +157,27 @@ class Experience(object):
             return False, False, False
 
         dist_index = math.floor(self.record_size / self.size * self.partition_num)
+        print(self.record_size / self.size * self.partition_num)
+        if dist_index < 1:
+            return [self._experience[v] for v in self._experience.keys()][:250],1,[v for v in self._experience.keys()][:250]
         # issue 1 by @camigord
         partition_size = math.floor(self.size / self.partition_num)
         partition_max = dist_index * partition_size
         distribution = self.distributions[dist_index]
         rank_list = []
         # sample from k segments
-        for n in xrange(1, self.batch_size + 1):
-            index = random.randint(distribution['strata_ends'][n] + 1,
+        for n in range(1, self.batch_size + 1):
+            if ((distribution['strata_ends'][n] + 1) - distribution['strata_ends'][n + 1]) > 0:
+                index = random.randint(distribution['strata_ends'][n],
                                    distribution['strata_ends'][n + 1])
+
+            else:
+               
+                index = random.randint(distribution['strata_ends'][n] + 1,
+                    distribution['strata_ends'][n + 1])
+
             rank_list.append(index)
+
 
         # beta, increase by global_step, max 1
         beta = min(self.beta_zero + (global_step - self.learn_start - 1) * self.beta_grad, 1)

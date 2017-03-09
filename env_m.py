@@ -1,10 +1,10 @@
 import os, pygame, pygame.locals, sys, random, math
 import numpy as np
-from pybrain.datasets import SupervisedDataSet
+#from pybrain.datasets import SupervisedDataSet
 from time import sleep
 # Helper functions
 def argmax(b):
-    maxVal = None
+    maxVal = -100000000
     maxData = None
     for i,a in enumerate(b):
         if a>maxVal:
@@ -56,18 +56,18 @@ class Env(object):
             self.usedfont = pygame.font.SysFont("monospace", 15)
             self.clock = pygame.time.Clock()
             self.usedfont = pygame.font.SysFont("monospace", 15)          
-            self.allPixelsDS = [[np.array([]) for i in range(0,self.NOFPIXELSPLITS)] for i in xrange(0,8)]
+            self.allPixelsDS = [[np.array([]) for i in range(0,self.NOFPIXELSPLITS)] for i in range(0,8)]
             pixels = []
 
-            for x in range(0,self.XSIZE/self.MAGNIFY):
-                for y in range(0,self.YSIZE/self.MAGNIFY):
+            for x in range(0,int(self.XSIZE/self.MAGNIFY)):
+                for y in range(0,int(self.YSIZE/self.MAGNIFY)):
                     if not self.obstaclePixels[x*self.MAGNIFY][y*self.MAGNIFY]:
                         pixels.append((float(x)*self.MAGNIFY/self.XSIZE,float(y)*self.MAGNIFY/self.YSIZE))
             random.shuffle(pixels)
 
 
             for i in range(0,self.NOFPIXELSPLITS):
-                thisChunk = len(pixels)/(self.NOFPIXELSPLITS-i)
+                thisChunk = int(len(pixels)/(self.NOFPIXELSPLITS-i))
                 for j in range(0,thisChunk):
                     for k in range(0,8):
                         a = np.array([pixels[j][0],pixels[j][1],math.sin(k*0.25*math.pi),math.cos(k*0.25*math.pi)])

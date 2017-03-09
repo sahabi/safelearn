@@ -77,7 +77,7 @@ class experienceReplay:
                     self.buffer[i].TD = abs(self.buffer[i].R + 1 * \
                 Q_est.predict(self.buffer[i].S[np.newaxis])[0][argmax(Q.predict(self.buffer[i].S[np.newaxis])[0])] - \
                 Q.predict(self.buffer[idx[jj-1]].S[np.newaxis])[0][self.buffer[idx[jj-1]].A][0])
-                    print "!!!!!!!!!!"
+                    print("!!!!!!!!!!")
                 else:
                     self.buffer[i].TD = abs(self.buffer[i].R + 1 * \
                 Q_est.predict(self.buffer[i].S[np.newaxis])[0][argmax(Q.predict(self.buffer[i].S[np.newaxis])[0])] - \

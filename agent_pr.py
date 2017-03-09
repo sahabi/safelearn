@@ -4,11 +4,11 @@
 
 from policy import eGreedy
 from value_function import deepQNetwork
-from experience_replay import experienceReplay, memoryNode
+#from experience_replay import experienceReplay, memoryNode
 from rank_based import Experience
 import numpy as np
 def argmax(b):
-    maxVal = None
+    maxVal = -1000000000000
     maxData = None
     for i,a in enumerate(b):
         if a>maxVal:
@@ -24,12 +24,19 @@ class agent:
         self.policy = eGreedy(epsilon)
         self.Q = deepQNetwork(learningRate, stateDim, len(actions))
         self.Q_est = deepQNetwork(learningRate, stateDim, len(actions))
-        self.experience = experienceReplay(memorySize)
-        conf = {'size': 50,
+        #self.experience = experienceReplay(memorySize)
+        conf = {'size': 500000,
         'learn_start': 10,
         'partition_num': 5,
         'total_step': 100,
-        'batch_size': 32}
+        'batch_size': 250}
+        
+        # conf = {'size': 50,
+        #     'learn_start': 10,
+        #     'partition_num': 5,
+        #     'total_step': 100,
+        #     'batch_size': 4}
+
         self.experience_pr = Experience(conf)
 
         
@@ -37,29 +44,38 @@ class agent:
         return self.policy.enact(self.actions, self.Q.predict(state[np.newaxis,:]))
         
     def observe(self, state, action, reward, nextState):
-        self.experience.remember(state, action, reward, nextState)
+        #self.experience.remember(state, action, reward, nextState)
         self.experience_pr.store((state, action, reward, nextState))
 
     # By which I mean run through some experience and update the Q function accordingly
     def reflect(self, iteration, batchSize = 250):
         targets = np.zeros((batchSize,len(self.actions)))
         states = np.zeros((batchSize,self.stateDim))
-        experience, w, rank_e_id = self.experience_pr.sample()
+        experiences, w, rank_e_id = self.experience_pr.sample()
+        delta = [0 for x in rank_e_id]
+
                         
         # for (i, memory) in enumerate(self.experience.recall(self.Q, self.Q_est, batchSize)):
-        for exp in enumerate(experience):
+        for i,exp in enumerate(experiences):
+
+            #(s1, a, r, s2, t)
             #(i, memory) in enumerate(self.experience.recall(self.Q, self.Q_est, batchSize)):
             #experience, w, rank_e_id = self.experience_pr.sample()
     
             #targets[i] = self.Q_est.predict(memory.S[np.newaxis])
     
             # if the agent moves to the terminal state then the return is exactly the reward
-            if memory.next.S is None:
-                targets[i,memory.A] = memory.R
+            if exp[3] is None:
+                targets[i,exp[1]] = exp[2]
             # otherwise we bootstrap the return by observing the current reward and adding it to the value of the next state-greedy action 
             else:
-                targets[i,memory.A] = memory.R + self.gamma * self.Q_est.predict(memory.next.S[np.newaxis])[0][argmax(self.Q.predict(memory.next.S[np.newaxis])[0])]
-            states[i] = memory.S
+                targets[i,exp[1]] = exp[2] + self.gamma * self.Q_est.predict(exp[3][np.newaxis])[0][argmax(self.Q.predict(exp[3][np.newaxis])[0])]
+            states[i] = exp[0]
+            delta[i] = abs(exp[2] + (1 * \
+                self.Q_est.predict(exp[0][np.newaxis])[0][argmax(self.Q.predict(exp[0][np.newaxis])[0])]) - \
+                self.Q.predict(experiences[i-1][0][np.newaxis])[0][experiences[i-1][1]])
+        self.experience_pr.update_priority(rank_e_id, delta)
+        self.experience_pr.rebalance()
                   
         # in case the experience replay wasn't able to serve up enough memories, we need to trim the matrices                  
         states.resize((i+1,self.stateDim))
