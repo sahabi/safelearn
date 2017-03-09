@@ -17,7 +17,7 @@ def argmax(b):
     return maxData
 class agent:
     
-    def __init__(self, stateDim, actions, learningRate=0.05, gamma=0.99, epsilon=1, memorySize=150000):
+    def __init__(self, stateDim, actions, learningRate=0.001, gamma=0.99, epsilon=1, memorySize=150000):
         self.gamma = gamma
         self.stateDim = stateDim
         self.actions = actions
@@ -25,9 +25,9 @@ class agent:
         self.Q = deepQNetwork(learningRate, stateDim, len(actions))
         self.Q_est = deepQNetwork(learningRate, stateDim, len(actions))
         #self.experience = experienceReplay(memorySize)
-        conf = {'size': 500000,
+        conf = {'size': 100000,
         'learn_start': 10,
-        'partition_num': 5,
+        'partition_num': 250,
         'total_step': 100,
         'batch_size': 250}
         
@@ -45,7 +45,8 @@ class agent:
         
     def observe(self, state, action, reward, nextState):
         #self.experience.remember(state, action, reward, nextState)
-        self.experience_pr.store((state, action, reward, nextState))
+        if self.experience_pr.store((state, action, reward, nextState)):
+            pass#print("Observation Stored")
 
     # By which I mean run through some experience and update the Q function accordingly
     def reflect(self, iteration, batchSize = 250):
@@ -53,6 +54,7 @@ class agent:
         states = np.zeros((batchSize,self.stateDim))
         experiences, w, rank_e_id = self.experience_pr.sample()
         delta = [0 for x in rank_e_id]
+        #print (rank_e_id)
 
                         
         # for (i, memory) in enumerate(self.experience.recall(self.Q, self.Q_est, batchSize)):
@@ -71,11 +73,10 @@ class agent:
             else:
                 targets[i,exp[1]] = exp[2] + self.gamma * self.Q_est.predict(exp[3][np.newaxis])[0][argmax(self.Q.predict(exp[3][np.newaxis])[0])]
             states[i] = exp[0]
-            delta[i] = abs(exp[2] + (1 * \
-                self.Q_est.predict(exp[0][np.newaxis])[0][argmax(self.Q.predict(exp[0][np.newaxis])[0])]) - \
-                self.Q.predict(experiences[i-1][0][np.newaxis])[0][experiences[i-1][1]])
+            delta[i] = abs(targets[i,exp[1]] - self.Q.predict(experiences[i-1][0][np.newaxis])[0][experiences[i-1][1]]) + 0.1
+        #print (delta)
         self.experience_pr.update_priority(rank_e_id, delta)
-        self.experience_pr.rebalance()
+        #self.experience_pr.rebalance()
                   
         # in case the experience replay wasn't able to serve up enough memories, we need to trim the matrices                  
         states.resize((i+1,self.stateDim))

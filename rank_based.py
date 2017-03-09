@@ -19,7 +19,7 @@ class Experience(object):
         self.replace_flag = conf['replace_old'] if 'replace_old' in conf else True
         self.priority_size = conf['priority_size'] if 'priority_size' in conf else self.size
 
-        self.alpha = conf['alpha'] if 'alpha' in conf else 0.7
+        self.alpha = conf['alpha'] if 'alpha' in conf else 0.4
         self.beta_zero = conf['beta_zero'] if 'beta_zero' in conf else 0.5
         self.batch_size = conf['batch_size'] if 'batch_size' in conf else 32
         self.learn_start = conf['learn_start'] if 'learn_start' in conf else 1000
@@ -158,8 +158,9 @@ class Experience(object):
 
         dist_index = math.floor(self.record_size / self.size * self.partition_num)
         print(self.record_size / self.size * self.partition_num)
-        if dist_index < 1:
-            return [self._experience[v] for v in self._experience.keys()][:250],1,[v for v in self._experience.keys()][:250]
+        #if dist_index < 1:
+        #    print('dist')
+        #    return [self._experience[v] for v in self._experience.keys()][:250],1,[v for v in self._experience.keys()][:250]
         # issue 1 by @camigord
         partition_size = math.floor(self.size / self.partition_num)
         partition_max = dist_index * partition_size

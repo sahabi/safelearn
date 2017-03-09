@@ -19,7 +19,7 @@ class Env(object):
         self.YSIZE = 480
         # When visualizing the learned policy, in order to speed up things, we only a fraction of all pixels on a lower resolution. Here are the parameters for that.
         self.MAGNIFY = 2
-        self.NOFPIXELSPLITS = 16
+        self.NOFPIXELSPLITS = 4
         self.viz = viz
         # Obstacle definitions
         obstacle_x_min = 230
@@ -189,6 +189,14 @@ class Env(object):
         elif self.obstaclePixels[int(self.currentPos[0])][int(self.currentPos[1])]:
             R = bad
             done = True 
+        # passing horizantal line second half          
+        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[1]<self.YSIZE/2)):
+            R = good
+            done = False
+        # passing horizantal line second half          
+        elif ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[1]>self.YSIZE/2)):
+            R = bad
+            done = True
         # passing below the obstacle from right to left           
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
             R = good
@@ -203,13 +211,13 @@ class Env(object):
             done = True
         # passing above the obstacle from left to right    
         elif((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
-            R = 0.0
+            R = good
             done = False
         else:
             if (self.currentPos[0]>self.XSIZE/2):
-                R = ((self.currentPos[1] - stepStartingPos[1])/self.YSIZE) + ((stepStartingPos[0]-self.currentPos[0])/self.XSIZE)
+                R = 0#((self.currentPos[1] - stepStartingPos[1])/self.YSIZE) + ((stepStartingPos[0]-self.currentPos[0])/self.XSIZE)
             elif (self.currentPos[0]<self.XSIZE/2):
-                R = (stepStartingPos[1] - self.currentPos[1])/self.YSIZE + ((self.currentPos[0] - stepStartingPos[0])/self.XSIZE)
+                R = 0#(stepStartingPos[1] - self.currentPos[1])/self.YSIZE + ((self.currentPos[0] - stepStartingPos[0])/self.XSIZE)
             else:
                 R = 0
             done = False
