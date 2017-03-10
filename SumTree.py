@@ -7,6 +7,7 @@ class SumTree:
         self.capacity = capacity
         self.tree = numpy.zeros( 2*capacity - 1 )
         self.data = numpy.zeros( capacity, dtype=object )
+        self.max_p = 1
 
     def _propagate(self, idx, change):
         parent = (idx - 1) // 2
@@ -45,6 +46,8 @@ class SumTree:
         change = p - self.tree[idx]
 
         self.tree[idx] = p
+        if p > self.max_p:
+            self.max_p = p
         self._propagate(idx, change)
 
     def get(self, s):

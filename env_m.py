@@ -34,7 +34,7 @@ class Env(object):
                     self.obstaclePixels[i][j] = True
         self.CRASH_COST = 1
         self.GOAL_LINE_REWARD = 1
-        self.TRAIN_EVERY_NTH_STEP = 8
+        self.TRAIN_EVERY_NTH_STEP = 6
         self.currentPos = (100.0,100.0)
         self.currentDir = random.random()*math.pi*2
         self.currentSpeedPerStep = 1.0
@@ -191,15 +191,21 @@ class Env(object):
             done = True 
         # passing horizantal line second half          
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[1]<self.YSIZE/2)):
-            R = good
+            R = good/2.
+            print('checkpoint 2')
+            #R = 0
             done = False
-        # passing horizantal line second half          
+        elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[1]<self.YSIZE/2)):
+            R = bad
+            #R = 0
+            done = True
+        # passing horizantal line second half upwards      
         elif ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[1]>self.YSIZE/2)):
             R = bad
             done = True
         # passing below the obstacle from right to left           
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
-            R = good
+            R = good/2.
             done = True
         # passing above the obstacle from right to left    
         elif ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
@@ -211,7 +217,9 @@ class Env(object):
             done = True
         # passing above the obstacle from left to right    
         elif((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
-            R = good
+            R = 0#good/3.
+            print('checkpoint 1')
+            #R = 0
             done = False
         else:
             if (self.currentPos[0]>self.XSIZE/2):
