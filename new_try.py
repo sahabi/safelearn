@@ -218,8 +218,8 @@ class Environment:
     def __init__(self):
         self.env = env_m.Env()
 
-    def run(self, agent, iteration=0):              
-        s = self.env.reset(agent.brain,iteration)
+    def run(self, agent, iteration=0, viz=False):          
+        s = self.env.reset(agent.brain,iteration,viz=viz)
         # w = processImage(img)
         # s = numpy.array([w, w])
 
@@ -296,7 +296,10 @@ try:
 
     print("Starting learning")
     while True:
-        reward = env.run(agent,iteration)
+        if maxsofar >= -.5:
+            reward = env.run(agent,iteration,viz=True)
+        else:
+            reward = env.run(agent,iteration)
         iteration += 1
         avgreward.append(reward)
         x.append(iteration)

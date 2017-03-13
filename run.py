@@ -43,8 +43,8 @@ class Brain:
         model.add(Dense(1, input_dim=4))
         model.add(Activation('relu'))
         model.add(Dense(40, activation='relu'))
-        #model.add(Dense(24, activation='relu'))
-        #model.add(Dense(16, activation='relu'))
+        model.add(Dense(40, activation='relu'))
+        #self.model.add(Dense(16, activation='relu'))
         model.add(Dense(8,activation='linear')) 
         model.compile(lr=LR, optimizer='rmsprop', loss='mse')
 
@@ -248,14 +248,14 @@ class Environment:
 
 #-------------------- MAIN ----------------------------
 MEMORY_CAPACITY = 50000 
-BATCH_SIZE = 50
+BATCH_SIZE = 4
 GAMMA = 0.99
 MAX_EPSILON = 1
 MIN_EPSILON = 0.05
 EXPLORATION_STOP = 250000   # at this step epsilon will be 0.01
 LAMBDA = - math.log(0.01) / EXPLORATION_STOP  # speed of decay
-UPDATE_TARGET_FREQUENCY = 125
-LR = 0.07
+UPDATE_TARGET_FREQUENCY = 400
+LR = 0.03
 
 env = Environment()
 
@@ -294,7 +294,7 @@ if True:
 
 points = ax.plot(x, y, 'o')[0]
 #rand = 50000
-rand_agent = False
+rand_agent = True
 try:
     print("Initialization with random agent...")
     while randomAgent.exp < MEMORY_CAPACITY and rand_agent:

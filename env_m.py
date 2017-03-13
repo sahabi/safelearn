@@ -34,7 +34,7 @@ class Env(object):
                     self.obstaclePixels[i][j] = True
         self.CRASH_COST = 1
         self.GOAL_LINE_REWARD = 1
-        self.TRAIN_EVERY_NTH_STEP = 5
+        self.TRAIN_EVERY_NTH_STEP = 6
         self.currentPos = (100.0,100.0)
         self.currentDir = random.random()*math.pi*2
         self.currentSpeedPerStep = 1.0
@@ -84,7 +84,7 @@ class Env(object):
         self.displayDirection = 0
         self.iteration = 0
         #print self.allPixelsDS
-    def reset(self,net,iteration,viz):
+    def reset(self,net,iteration,viz=False):
         #self.currentPos = (400.0,400.0)
         self.currentPos = (.25*self.XSIZE,.15*self.YSIZE)
         self.currentDir = math.pi*.5
@@ -192,7 +192,7 @@ class Env(object):
             done = True 
         # passing horizantal line second half          
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[1]<self.YSIZE/2)):
-            R = good/3.
+            R = .7
             print('checkpoint 2')
             #R = 0
             done = False
@@ -206,7 +206,7 @@ class Env(object):
             done = True
         # passing below the obstacle from right to left           
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
-            R = good/3.
+            R = .3
             done = True
             print('checkpoint 3')
         # passing above the obstacle from right to left    
