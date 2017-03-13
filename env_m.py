@@ -34,7 +34,7 @@ class Env(object):
                     self.obstaclePixels[i][j] = True
         self.CRASH_COST = 1
         self.GOAL_LINE_REWARD = 1
-        self.TRAIN_EVERY_NTH_STEP = 6
+        self.TRAIN_EVERY_NTH_STEP = 5
         self.currentPos = (100.0,100.0)
         self.currentDir = random.random()*math.pi*2
         self.currentSpeedPerStep = 1.0
@@ -43,48 +43,48 @@ class Env(object):
         self.displayBufferEmpty = True
         self.isLearning = True
         # Prepare screen
-        if self.viz:
-            self.screen = pygame.display.set_mode((self.XSIZE,self.YSIZE))
-            pygame.display.set_caption('Learning Visualizer')
-            self.clock = pygame.time.Clock()
-            self.isPaused = False
-            self.screenBuffer = pygame.Surface(self.screen.get_size())
-            self.screenBuffer = self.screenBuffer.convert()
-            self.predictionBuffer = pygame.Surface((self.XSIZE/self.MAGNIFY,self.YSIZE/self.MAGNIFY))
-            self.predictionBuffer.fill((64, 64, 64)) # Dark Gray
-            pygame.font.init()
-            self.usedfont = pygame.font.SysFont("monospace", 15)
-            self.clock = pygame.time.Clock()
-            self.usedfont = pygame.font.SysFont("monospace", 15)          
-            self.allPixelsDS = [[np.array([]) for i in range(0,self.NOFPIXELSPLITS)] for i in range(0,8)]
-            pixels = []
+        #if self.viz:
+        self.screen = pygame.display.set_mode((self.XSIZE,self.YSIZE))
+        pygame.display.set_caption('Learning Visualizer')
+        self.clock = pygame.time.Clock()
+        self.isPaused = False
+        self.screenBuffer = pygame.Surface(self.screen.get_size())
+        self.screenBuffer = self.screenBuffer.convert()
+        self.predictionBuffer = pygame.Surface((self.XSIZE/self.MAGNIFY,self.YSIZE/self.MAGNIFY))
+        self.predictionBuffer.fill((64, 64, 64)) # Dark Gray
+        pygame.font.init()
+        self.usedfont = pygame.font.SysFont("monospace", 15)
+        self.clock = pygame.time.Clock()
+        self.usedfont = pygame.font.SysFont("monospace", 15)          
+        self.allPixelsDS = [[np.array([]) for i in range(0,self.NOFPIXELSPLITS)] for i in range(0,8)]
+        pixels = []
 
-            for x in range(0,int(self.XSIZE/self.MAGNIFY)):
-                for y in range(0,int(self.YSIZE/self.MAGNIFY)):
-                    if not self.obstaclePixels[x*self.MAGNIFY][y*self.MAGNIFY]:
-                        pixels.append((float(x)*self.MAGNIFY/self.XSIZE,float(y)*self.MAGNIFY/self.YSIZE))
-            random.shuffle(pixels)
+        for x in range(0,int(self.XSIZE/self.MAGNIFY)):
+            for y in range(0,int(self.YSIZE/self.MAGNIFY)):
+                if not self.obstaclePixels[x*self.MAGNIFY][y*self.MAGNIFY]:
+                    pixels.append((float(x)*self.MAGNIFY/self.XSIZE,float(y)*self.MAGNIFY/self.YSIZE))
+        random.shuffle(pixels)
 
+        for i in range(0,self.NOFPIXELSPLITS):
+            thisChunk = int(len(pixels)/(self.NOFPIXELSPLITS-i))
+            for j in range(0,thisChunk):
+                for k in range(0,8):
+                    a = np.array([pixels[j][0],pixels[j][1],math.sin(k*0.25*math.pi),math.cos(k*0.25*math.pi)])
+                    #a = np.array([pixels[j][0],pixels[j][1]])
+                    b = self.allPixelsDS[k][i]
+                    if b.shape[0] == 0:
+                        self.allPixelsDS[k][i] = a
+                    else:
+                        self.allPixelsDS[k][i] = np.vstack((a,b))
+            pixels = pixels[thisChunk:]
+        for x in range(obstacle_x_min,obstacle_x_max):
+            for y in range(obstacle_y_min,obstacle_y_max):
+                self.screenBuffer.set_at((x,y),(0,0,0))
 
-            for i in range(0,self.NOFPIXELSPLITS):
-                thisChunk = int(len(pixels)/(self.NOFPIXELSPLITS-i))
-                for j in range(0,thisChunk):
-                    for k in range(0,8):
-                        a = np.array([pixels[j][0],pixels[j][1],math.sin(k*0.25*math.pi),math.cos(k*0.25*math.pi)])
-                        #a = np.array([pixels[j][0],pixels[j][1]])
-                        b = self.allPixelsDS[k][i]
-                        if b.shape[0] == 0:
-                            self.allPixelsDS[k][i] = a
-                        else:
-                            self.allPixelsDS[k][i] = np.vstack((a,b))
-                pixels = pixels[thisChunk:]
-            for x in range(obstacle_x_min,obstacle_x_max):
-                for y in range(obstacle_y_min,obstacle_y_max):
-                    self.screenBuffer.set_at((x,y),(0,0,0))
         self.displayDirection = 0
         self.iteration = 0
         #print self.allPixelsDS
-    def reset(self,net,iteration):
+    def reset(self,net,iteration,viz):
         #self.currentPos = (400.0,400.0)
         self.currentPos = (.25*self.XSIZE,.15*self.YSIZE)
         self.currentDir = math.pi*.5
@@ -92,7 +92,8 @@ class Env(object):
         self.currentRotationPerStep = 0.04
         self.iteration += 1
 #(x,y,direcSin,direcCos)
-        if pygame.display.get_active():
+        self.viz = viz
+        if pygame.display.get_active() and self.viz:
             color = (255*0/8.0,0,0)
             allActivations = net.predict_all(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS])
             for i,(x,y,direcSin,direcCos) in enumerate(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS]):
@@ -191,7 +192,7 @@ class Env(object):
             done = True 
         # passing horizantal line second half          
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[1]<self.YSIZE/2)):
-            R = good/2.
+            R = good/3.
             print('checkpoint 2')
             #R = 0
             done = False
@@ -205,8 +206,9 @@ class Env(object):
             done = True
         # passing below the obstacle from right to left           
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
-            R = good/2.
+            R = good/3.
             done = True
+            print('checkpoint 3')
         # passing above the obstacle from right to left    
         elif ((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
             R = bad
@@ -217,7 +219,7 @@ class Env(object):
             done = True
         # passing above the obstacle from left to right    
         elif((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
-            R = 0#good/3.
+            R = good/3.
             print('checkpoint 1')
             #R = 0
             done = False

@@ -105,7 +105,6 @@ for i_episode in range(trials):
         title = "{} Reached".format(notify_value)
         # w = Widget(notify_value)
         # w.root.mainloop()
-        # print('yo')
         notify_value = float(input())
     print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {}, Max: {}".format(i_episode,np.mean(avgreward),tot_R, len(blob.experience_pr._experience), 1, blob.policy.epsilon,maxsofar))
 plt.close(fig)

@@ -43,10 +43,10 @@ class Brain:
         model.add(Dense(1, input_dim=4))
         model.add(Activation('relu'))
         model.add(Dense(40, activation='relu'))
-        model.add(Dense(40, activation='relu'))
-        #self.model.add(Dense(16, activation='relu'))
+        #model.add(Dense(24, activation='relu'))
+        #model.add(Dense(16, activation='relu'))
         model.add(Dense(8,activation='linear')) 
-        model.compile(lr=.03, optimizer='rmsprop', loss='mse')
+        model.compile(lr=LR, optimizer='rmsprop', loss='mse')
 
         return model
 
@@ -74,14 +74,14 @@ class Brain:
 
 #-------------------- MEMORY --------------------------
 class Memory:   # stored as ( s, a, r, s_ ) in SumTree
-    e = 0.01
+    e = .01
     a = 0.6
 
     def __init__(self, capacity):
         self.tree = SumTree(capacity)
 
     def _getPriority(self, error):
-        return (error + self.e) ** self.a
+        return (abs(error) + self.e) ** self.a
 
     def add(self, error, sample):
         p = self._getPriority(error)
@@ -97,8 +97,9 @@ class Memory:   # stored as ( s, a, r, s_ ) in SumTree
 
             s = random.uniform(a, b)
             (idx, p, data) = self.tree.get(s)
+            # print 'sample {}: {}'.format(idx, data)
             batch.append( (idx, data) )
-
+        
         return batch
 
     def update(self, idx, error):
@@ -106,29 +107,19 @@ class Memory:   # stored as ( s, a, r, s_ ) in SumTree
         self.tree.update(idx, p)
 
 #-------------------- AGENT ---------------------------
-MEMORY_CAPACITY = 50000 
 
-BATCH_SIZE = 60
-
-GAMMA = 0.99
-
-MAX_EPSILON = 1
-MIN_EPSILON = 0.05
-
-EXPLORATION_STOP = 20000   # at this step epsilon will be 0.01
-LAMBDA = - math.log(0.01) / EXPLORATION_STOP  # speed of decay
-
-UPDATE_TARGET_FREQUENCY = 4
 
 class Agent:
+    
     steps = 0
-    epsilon = MAX_EPSILON
-
+    
     def __init__(self, stateCnt, actionCnt):
         self.stateCnt = stateCnt
         self.actionCnt = actionCnt
         self.exp = 0
-
+        self.memory = Memory(MEMORY_CAPACITY)
+        self.epsilon = MAX_EPSILON
+        self.update_ep = 0
         self.brain = Brain(stateCnt, actionCnt)
         # self.memory = Memory(MEMORY_CAPACITY)
         
@@ -138,18 +129,20 @@ class Agent:
         else:
             return numpy.argmax(self.brain.predictOne(s))
 
-    def observe(self, sample):  # in (s, a, r, s_) format
+    def observe(self, sample, iteration=0):  # in (s, a, r, s_) format
         x, y, errors = self._getTargets([(0, sample)])
         self.memory.add(errors[0], sample)
         #self.memory.add(self.memory.tree.max_p, sample)
         self.exp += 1
 
         if self.steps % UPDATE_TARGET_FREQUENCY == 0:
-            self.brain.updateTargetModel()
+           self.brain.updateTargetModel()
+           self.update_ep = iteration
 
         # slowly decrease Epsilon based on our eperience
         self.steps += 1
         self.epsilon = MIN_EPSILON + (MAX_EPSILON - MIN_EPSILON) * math.exp(-LAMBDA * self.steps)
+        return self.update_ep
 
     def _getTargets(self, batch):
         no_state = numpy.zeros(4)
@@ -195,20 +188,22 @@ class Agent:
         self.brain.train(x, y)
 
 class RandomAgent:
-    memory = Memory(MEMORY_CAPACITY)
+    
     
 
     def __init__(self, actionCnt):
         self.actionCnt = actionCnt
         self.brain = Brain(8, actionCnt)
         self.exp = 0
+        self.memory = Memory(MEMORY_CAPACITY)
 
     def act(self, s):
         return random.randint(0, self.actionCnt-1)
 
-    def observe(self, sample):  # in (s, a, r, s_) format
+    def observe(self, sample, iteration=0):  # in (s, a, r, s_) format
         error = abs(sample[2])  # reward
         #error = sample[2]
+        #error = self.memory.tree.max_p
         self.memory.add(error, sample)
         self.exp += 1
 
@@ -217,11 +212,15 @@ class RandomAgent:
 
 #-------------------- ENVIRONMENT ---------------------
 class Environment:
-    def __init__(self):
-        self.env = env_m.Env()
+    def __init__(self, viz=False):
+        self.env = env_m.Env(viz=viz)
 
-    def run(self, agent, iteration=0):              
-        s = self.env.reset(agent.brain,iteration)
+    def run(self, agent, viz_flag=False, iteration=0,ep_id=0):
+        if viz_flag:
+            env.viz = True
+        else:
+            env.viz = False          
+        s = self.env.reset(agent.brain,iteration,viz_flag)
 
         R = 0
         while True:         
@@ -232,21 +231,32 @@ class Environment:
 
             if done: # terminal state
                 s_ = None
-
-            agent.observe( (s, a, r, s_) )        
+            iteration += 1
+            update_ep = agent.observe( (s, a, r, s_), ep_id )        
 
             s = s_
             R += r
-            iteration += 1
+            agent.replay() 
+            
 
             if done:
-                agent.replay() 
+                #agent.replay() 
                 break
 
         #print("Total reward:", R)
-        return R
+        return (R,update_ep)
 
 #-------------------- MAIN ----------------------------
+MEMORY_CAPACITY = 50000 
+BATCH_SIZE = 50
+GAMMA = 0.99
+MAX_EPSILON = 1
+MIN_EPSILON = 0.05
+EXPLORATION_STOP = 250000   # at this step epsilon will be 0.01
+LAMBDA = - math.log(0.01) / EXPLORATION_STOP  # speed of decay
+UPDATE_TARGET_FREQUENCY = 125
+LR = 0.07
+
 env = Environment()
 
 stateCnt  = (8, 1)
@@ -257,7 +267,7 @@ randomAgent = RandomAgent(actionCnt)
 
 notify_value = -1
 t = 0
-avgreward = deque([],100)
+avgreward = deque([],20)
 trials = 100000
 fig, ax = plt.subplots(1, 1)
 ax.set_aspect('auto')
@@ -270,40 +280,48 @@ x = deque([],500)
 x.append(0)
 y = deque([],500)
 y.append(-1)
+precision = 2
 
 plt.show(False)
 plt.draw()
 maxsofar = -2
 max_, = ax.plot((0, 5000), (maxsofar, maxsofar), 'k-')
-thresh, = ax.plot((0, 5000), (notify_value, notify_value), 'k-') 
+thresh, = ax.plot((0, 5000), (notify_value, notify_value), 'k-')
+upep, = ax.plot((0, 0), (-1, 1), 'k-', color = 'r') 
 if True:
     # cache the background
     background = fig.canvas.copy_from_bbox(ax.bbox)
 
 points = ax.plot(x, y, 'o')[0]
-rand = 50000
+#rand = 50000
 rand_agent = False
 try:
     print("Initialization with random agent...")
     while randomAgent.exp < MEMORY_CAPACITY and rand_agent:
         env.run(randomAgent)
         print(randomAgent.exp, "/", MEMORY_CAPACITY)
-    #pickle.dump(randomAgent.memory, open( "memory.p", "wb" ))
-
-    #agent.memory = randomAgent.memory
-
-    agent.memory = pickle.load( open( "memory.p", "rb" ) )
+    if rand_agent:
+        pickle.dump(randomAgent.memory, open( "memory_abs{}.p".format(MEMORY_CAPACITY), "wb" ))
+        agent.memory = randomAgent.memory
+    else:
+        #pass
+        # agent.memory = randomAgent.memory
+        agent.memory = pickle.load( open( "memory_abs50000.p", "rb" ) )
 
     randomAgent = None
     iteration = 1
+    env = Environment(viz=False)
+    viz_flag = False
 
     print("Starting learning")
     while iteration < trials:
-        reward = env.run(agent,iteration)
+        reward, update_ep = env.run(agent,viz_flag,ep_id=iteration)
         iteration += 1
         avgreward.append(reward)
         x.append(iteration)
-        y.append(np.mean(avgreward))
+        avg_reward = np.mean(avgreward)
+        viz_flag = True if avg_reward > .9 else False
+        y.append(avg_reward)
         points.set_data(x, y)
         if len(avgreward) > 10:
             maxsofar = max(maxsofar,np.mean(avgreward))
@@ -313,12 +331,14 @@ try:
             plt.pause(0.05)
             fig.canvas.restore_region(background)
             ax.set_xlim(max(iteration-500,0), iteration+100)
-            ax.set_ylim(-2, 2)
+            ax.set_ylim(-1, 1)
             rand = plt.plot((0, trials), (-.75, -.75), 'k-')
             max_.remove()
             max_, = ax.plot((0, trials), (maxsofar, maxsofar), 'k-', color = 'g')
             thresh.remove()
             thresh, = ax.plot((0, trials), (notify_value, notify_value), 'k-', color = 'r')
+            #upep.remove()
+            upep, = ax.plot((update_ep, update_ep), (-1, 1), 'k-', color = 'r')
             # redraw just the points
             ax.draw_artist(points)
             # fill in the axes rectangle
@@ -329,7 +349,7 @@ try:
         if maxsofar >= notify_value and len(avgreward) == 10000:
             title = "{} Reached".format(notify_value)
             notify_value = float(input())
-        print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {}, Max: {}".format(iteration,np.mean(avgreward),reward, agent.exp, 1, agent.epsilon,maxsofar))
+        print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {:.2f}, Max: {:.2f}, Exp: {}".format(iteration,str(np.round(np.mean(avgreward), precision)),str(np.round(reward, precision)), agent.memory.tree.write , MEMORY_CAPACITY, agent.epsilon,maxsofar,agent.exp))
 
 finally:
     pass#agent.brain.model.save("Seaquest-DQN-PER.h5")
