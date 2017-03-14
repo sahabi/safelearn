@@ -22,7 +22,7 @@ from matplotlib import pyplot as plt
 from dialogue import Widget
 import random, numpy, math, scipy
 from SumTree import SumTree
-import env_m
+import env_road as env_m
 import pickle
 
 #-------------------- BRAIN ---------------------------
@@ -247,15 +247,15 @@ class Environment:
         return (R,update_ep)
 
 #-------------------- MAIN ----------------------------
-MEMORY_CAPACITY = 50000 
-BATCH_SIZE = 4
+MEMORY_CAPACITY = 25000 
+BATCH_SIZE = 12
 GAMMA = 0.99
 MAX_EPSILON = 1
 MIN_EPSILON = 0.05
-EXPLORATION_STOP = 250000   # at this step epsilon will be 0.01
+EXPLORATION_STOP = 2500   # at this step epsilon will be 0.01
 LAMBDA = - math.log(0.01) / EXPLORATION_STOP  # speed of decay
 UPDATE_TARGET_FREQUENCY = 400
-LR = 0.03
+LR = 0.3
 
 env = Environment()
 
@@ -294,7 +294,7 @@ if True:
 
 points = ax.plot(x, y, 'o')[0]
 #rand = 50000
-rand_agent = True
+rand_agent = False
 try:
     print("Initialization with random agent...")
     while randomAgent.exp < MEMORY_CAPACITY and rand_agent:
@@ -306,7 +306,7 @@ try:
     else:
         #pass
         # agent.memory = randomAgent.memory
-        agent.memory = pickle.load( open( "memory_abs50000.p", "rb" ) )
+        agent.memory = pickle.load( open( "memory_abs25000.p", "rb" ) )
 
     randomAgent = None
     iteration = 1
@@ -320,7 +320,7 @@ try:
         avgreward.append(reward)
         x.append(iteration)
         avg_reward = np.mean(avgreward)
-        viz_flag = True if avg_reward > .9 else False
+        viz_flag = True if avg_reward > 0 else False
         y.append(avg_reward)
         points.set_data(x, y)
         if len(avgreward) > 10:
