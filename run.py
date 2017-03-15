@@ -247,7 +247,7 @@ class Environment:
         return (R,update_ep)
 
 #-------------------- MAIN ----------------------------
-MEMORY_CAPACITY = 10000
+MEMORY_CAPACITY = 50000
 BATCH_SIZE = 20
 GAMMA = 0.99
 MAX_EPSILON = 1
@@ -294,7 +294,7 @@ if True:
 
 points = ax.plot(x, y, 'o')[0]
 #rand = 50000
-rand_agent = False
+rand_agent = True
 
 if rand_agent:
     try:

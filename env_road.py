@@ -41,7 +41,7 @@ class Env(object):
         obs2 = obstacle(40,60,40,420)
         obs6 = obstacle(430,450,20,420)
         obs7 = obstacle(330,350,120,350)
-        obs8 = obstacle(180,200,350,440)
+        obs8 = obstacle(240,260,350,440)
         obs4 = make_horizontal_wall(obs2,obs6,'top')
         obs3 = make_horizontal_wall(obs2,obs1,'bot')
         obs5 = make_horizontal_wall(obs1,obs7,'top')
@@ -264,21 +264,21 @@ class Env(object):
             done = False
 
         elif ((self.currentPos[1]>self.YSIZE/2) and (self.currentPos[0]<self.XSIZE/2) and (stepStartingPos[0]>self.XSIZE/2)):
-            R += 1
+            R += 0
             done = True
             print('checkpoint 3')
         else:
             if self.inr1(self.currentPos[0],self.currentPos[1]):
-                R += (stepStartingPos[1] - self.currentPos[1])/ self.YSIZE
+                R += .5*(stepStartingPos[1] - self.currentPos[1])/ self.YSIZE
 
             if self.inr2(self.currentPos[0],self.currentPos[1]):
-                R += (self.currentPos[0] - stepStartingPos[0])/ self.XSIZE
+                R += .7*(self.currentPos[0] - stepStartingPos[0])/ self.XSIZE
 
             if self.inr3(self.currentPos[0],self.currentPos[1]):
                 R += (self.currentPos[1] - stepStartingPos[1])/ self.YSIZE
 
             if self.inr4(self.currentPos[0],self.currentPos[1]):
-                R += (stepStartingPos[0] - self.currentPos[0])/ self.XSIZE
+                R += 1.5*(stepStartingPos[0] - self.currentPos[0])/ self.XSIZE
             done = False
 
         S_dash = np.array([self.currentPos[0]/self.XSIZE, self.currentPos[1]/self.YSIZE,math.sin(self.currentDir*0.25*math.pi),math.cos(self.currentDir*0.25*math.pi)])
