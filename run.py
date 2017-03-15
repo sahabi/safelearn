@@ -42,8 +42,8 @@ class Brain:
         model = Sequential()
         model.add(Dense(1, input_dim=4))
         model.add(Activation('relu'))
-        model.add(Dense(40, activation='relu'))
-        model.add(Dense(40, activation='relu'))
+        model.add(Dense(24, activation='relu'))
+        #model.add(Dense(40, activation='relu'))
         #self.model.add(Dense(16, activation='relu'))
         model.add(Dense(8,activation='linear')) 
         model.compile(lr=LR, optimizer='rmsprop', loss='mse')
@@ -248,11 +248,11 @@ class Environment:
 
 #-------------------- MAIN ----------------------------
 MEMORY_CAPACITY = 10000
-BATCH_SIZE = 7
+BATCH_SIZE = 20
 GAMMA = 0.99
 MAX_EPSILON = 1
 MIN_EPSILON = 0.05
-EXPLORATION_STOP = 2500   # at this step epsilon will be 0.01
+EXPLORATION_STOP = 25000   # at this step epsilon will be 0.01
 LAMBDA = - math.log(0.01) / EXPLORATION_STOP  # speed of decay
 UPDATE_TARGET_FREQUENCY = 50
 LR = .1
@@ -294,21 +294,25 @@ if True:
 
 points = ax.plot(x, y, 'o')[0]
 #rand = 50000
-rand_agent = True
-try:
-    agent.memory = pickle.load( open( "memory_abs{}.p".format(MEMORY_CAPACITY), "rb" ) )
-except:
-    print("Initialization with random agent...")
-    while randomAgent.exp < MEMORY_CAPACITY and rand_agent:
-        env.run(randomAgent)
-        print(randomAgent.exp, "/", MEMORY_CAPACITY)
-    if rand_agent:
-        pickle.dump(randomAgent.memory, open( "memory_abs{}.p".format(MEMORY_CAPACITY), "wb" ))
-        agent.memory = randomAgent.memory
-    # else:
-    #     #pass
-    #     # agent.memory = randomAgent.memory
-    #     agent.memory = pickle.load( open( "memory_abs{}.p".format(MEMORY_CAPACITY), "rb" ) )
+rand_agent = False
+
+if rand_agent:
+    try:
+        agent.memory = pickle.load( open( "memory_abs{}.p".format(MEMORY_CAPACITY), "rb" ) )
+    except:
+        print("Initialization with random agent...")
+        while randomAgent.exp < MEMORY_CAPACITY and rand_agent:
+            env.run(randomAgent)
+            print(randomAgent.exp, "/", MEMORY_CAPACITY)
+        if rand_agent:
+            pickle.dump(randomAgent.memory, open( "memory_abs{}.p".format(MEMORY_CAPACITY), "wb" ))
+            agent.memory = randomAgent.memory
+        # else:
+        #     #pass
+        #     # agent.memory = randomAgent.memory
+        #     agent.memory = pickle.load( open( "memory_abs{}.p".format(MEMORY_CAPACITY), "rb" ) )
+else:
+    pass
 
 randomAgent = None
 iteration = 1
@@ -322,7 +326,7 @@ while iteration < trials:
     avgreward.append(reward)
     x.append(iteration)
     avg_reward = np.mean(avgreward)
-    viz_flag = True if avg_reward > -.4 else False
+    viz_flag = True if avg_reward > .5 else False
     y.append(avg_reward)
     points.set_data(x, y)
     if len(avgreward) > 10:

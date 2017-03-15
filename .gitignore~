@@ -90,6 +90,3 @@ ENV/
 
 # Pickles
 *.p
-
-# tilde
-*.*~

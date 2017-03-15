@@ -4,37 +4,6 @@ import numpy as np
 from time import sleep
 # Helper functions
 
-def inr1(x,y):
-    if 90 <= x <= 130 and 40 <= y <= 420:
-        return True
-
-def inr2(x,y):
-    if 90 <= x <= 430 and 40 <= y <= 90:
-        return True
-
-def inr3(x,y):
-    if 390 <= x <= 430 and 40 <= y <= 420:
-        return True
-
-def inr4(x,y):
-    if 200 <= x <= 430 and 370 <= y <= 420:
-        return True
-
-def inside(x,y):
-    #R1
-    if inr1(x,y):
-        return True
-    #R2
-    elif inr2(x,y):
-        return True
-    #R3
-    elif inr3(x,y): 
-        return True
-    #R4
-    elif inr4(x,y): 
-        return True
-    else:
-        return False
 
 class obstacle(object):
     def __init__(self,xmin,xmax,ymin,ymax):
@@ -52,6 +21,12 @@ def argmax(b):
             maxData = i
     return maxData
 
+def make_horizontal_wall(obs_left, obs_right,loc='top'):
+    if loc == 'bot':
+        return obstacle(obs_left.xmin,obs_right.xmax,min(obs_left.ymax,obs_right.ymax),min(obs_left.ymax,obs_right.ymax)+20)
+    if loc == 'top':
+        return obstacle(obs_left.xmin,obs_right.xmax,max(obs_left.ymin,obs_right.ymin)-20,max(obs_left.ymin,obs_right.ymin))
+
 class Env(object):
     def __init__(self,viz=True):
         # CONSTANTS for how large the drawing window is.
@@ -62,27 +37,17 @@ class Env(object):
         self.NOFPIXELSPLITS = 4
         self.viz = viz
         # Obstacle definitions
-        obs1 = obstacle(130,150,90,420)
-
-        obs2 = obstacle(70,90,40,420)
-
-        obs3 = obstacle(70,150,420,440)
-
-        obs4 = obstacle(70,430,20,40)
-
-        obs5 = obstacle(150,370,90,110)
-
+        obs1 = obstacle(130,150,120,420)
+        obs2 = obstacle(40,60,40,420)
         obs6 = obstacle(430,450,20,420)
-
-        obs7 = obstacle(370,390,90,350)
-
+        obs7 = obstacle(330,350,120,350)
         obs8 = obstacle(180,200,350,440)
-
-        obs9 = obstacle(180,390,350,370)
-
-        obs10 = obstacle(180,450,420,440)
+        obs4 = make_horizontal_wall(obs2,obs6,'top')
+        obs3 = make_horizontal_wall(obs2,obs1,'bot')
+        obs5 = make_horizontal_wall(obs1,obs7,'top')
+        obs10 = make_horizontal_wall(obs8,obs6,'bot')
+        obs9 = obstacle(obs8.xmin,obs7.xmax,obs7.ymax,obs7.ymax+20)
         
-
         self.OBSTACLES = [obs1,obs2,obs3,obs4,obs5,obs6,obs7,obs8,obs9,obs10]
         self.obstaclePixels = [[False for i in range(0,self.YSIZE)] for j in range(0,self.XSIZE)]
         for obs in self.OBSTACLES:
@@ -142,9 +107,48 @@ class Env(object):
         self.displayDirection = 0
         self.iteration = 0
         #print self.allPixelsDS
+
+    def inr1(self,x,y):
+        if self.OBSTACLES[1].xmax <= x <= self.OBSTACLES[0].xmin and self.OBSTACLES[1].ymin <= y <= self.OBSTACLES[1].ymax:
+            return True
+
+    def inr2(self,x,y):
+        if self.OBSTACLES[3].xmin <= x <= self.OBSTACLES[3].xmax and self.OBSTACLES[3].ymax <= y <= self.OBSTACLES[4].ymin :
+            return True
+
+    def inr3(self,x,y):
+        if self.OBSTACLES[6].xmax <= x <= self.OBSTACLES[5].xmin and self.OBSTACLES[5].ymin <= y <= self.OBSTACLES[5].ymax:
+            return True
+
+    def inr4(self,x,y):
+        if self.OBSTACLES[9].xmin <= x <= self.OBSTACLES[9].xmax and self.OBSTACLES[8].ymax <= y <= self.OBSTACLES[9].ymin:
+            return True
+
+    def inside(self,x,y):
+        #R1
+        if self.inr1(x,y):
+            return True
+        #R2
+        elif self.inr2(x,y):
+            return True
+        #R3
+        elif self.inr3(x,y):
+            return True
+        #R4
+        elif self.inr4(x,y): 
+            return True
+        else:
+            return False
+
     def reset(self,net,iteration,viz=True):
         #self.currentPos = (400.0,400.0)
-        self.currentPos = (.25*self.XSIZE,.15*self.YSIZE)
+        rand_x = random.random()*self.XSIZE
+        rand_y = random.random()*self.YSIZE
+        while not self.inside(rand_x,rand_y):
+            rand_x = random.random()*self.XSIZE
+            rand_y = random.random()*self.YSIZE     
+        self.currentPos = (.25*self.XSIZE,.1*self.YSIZE)
+        self.currentPos = (rand_x, rand_y)
         self.currentDir = math.pi*.5
         self.currentSpeedPerStep = 1.0
         self.currentRotationPerStep = 0.04
@@ -243,9 +247,9 @@ class Env(object):
         #print inside(self.currentPos[0],self.currentPos[1])
         R = 0
 
-        if not inside(self.currentPos[0],self.currentPos[1]):
+        if not self.inside(self.currentPos[0],self.currentPos[1]):
             done = True
-            R += -1
+            R += 0
 
         elif((self.currentPos[1]<self.YSIZE/2) and (self.currentPos[0]>self.XSIZE/2) and (stepStartingPos[0]<self.XSIZE/2)):
             R += 0
@@ -264,16 +268,16 @@ class Env(object):
             done = True
             print('checkpoint 3')
         else:
-            if inr1(self.currentPos[0],self.currentPos[1]):
+            if self.inr1(self.currentPos[0],self.currentPos[1]):
                 R += (stepStartingPos[1] - self.currentPos[1])/ self.YSIZE
 
-            if inr2(self.currentPos[0],self.currentPos[1]):
+            if self.inr2(self.currentPos[0],self.currentPos[1]):
                 R += (self.currentPos[0] - stepStartingPos[0])/ self.XSIZE
 
-            if inr3(self.currentPos[0],self.currentPos[1]):
+            if self.inr3(self.currentPos[0],self.currentPos[1]):
                 R += (self.currentPos[1] - stepStartingPos[1])/ self.YSIZE
 
-            if inr4(self.currentPos[0],self.currentPos[1]):
+            if self.inr4(self.currentPos[0],self.currentPos[1]):
                 R += (stepStartingPos[0] - self.currentPos[0])/ self.XSIZE
             done = False
 
