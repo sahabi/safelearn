@@ -131,8 +131,8 @@ class Agent:
 
     def observe(self, sample, iteration=0):  # in (s, a, r, s_) format
         x, y, errors = self._getTargets([(0, sample)])
-        self.memory.add(errors[0], sample)
-        #self.memory.add(self.memory.tree.max_p, sample)
+        #self.memory.add(errors[0], sample)
+        self.memory.add(self.memory.tree.max_p, sample)
         self.exp += 1
 
         if self.steps % UPDATE_TARGET_FREQUENCY == 0:
@@ -201,9 +201,9 @@ class RandomAgent:
         return random.randint(0, self.actionCnt-1)
 
     def observe(self, sample, iteration=0):  # in (s, a, r, s_) format
-        error = abs(sample[2])  # reward
+        #error = abs(sample[2])  # reward
         #error = sample[2]
-        #error = self.memory.tree.max_p
+        error = self.memory.tree.max_p
         self.memory.add(error, sample)
         self.exp += 1
 
@@ -247,15 +247,15 @@ class Environment:
         return (R,update_ep)
 
 #-------------------- MAIN ----------------------------
-MEMORY_CAPACITY = 25000 
-BATCH_SIZE = 12
+MEMORY_CAPACITY = 10000
+BATCH_SIZE = 7
 GAMMA = 0.99
 MAX_EPSILON = 1
 MIN_EPSILON = 0.05
 EXPLORATION_STOP = 2500   # at this step epsilon will be 0.01
 LAMBDA = - math.log(0.01) / EXPLORATION_STOP  # speed of decay
-UPDATE_TARGET_FREQUENCY = 400
-LR = 0.3
+UPDATE_TARGET_FREQUENCY = 50
+LR = .1
 
 env = Environment()
 
@@ -294,8 +294,10 @@ if True:
 
 points = ax.plot(x, y, 'o')[0]
 #rand = 50000
-rand_agent = False
+rand_agent = True
 try:
+    agent.memory = pickle.load( open( "memory_abs{}.p".format(MEMORY_CAPACITY), "rb" ) )
+except:
     print("Initialization with random agent...")
     while randomAgent.exp < MEMORY_CAPACITY and rand_agent:
         env.run(randomAgent)
@@ -303,53 +305,53 @@ try:
     if rand_agent:
         pickle.dump(randomAgent.memory, open( "memory_abs{}.p".format(MEMORY_CAPACITY), "wb" ))
         agent.memory = randomAgent.memory
+    # else:
+    #     #pass
+    #     # agent.memory = randomAgent.memory
+    #     agent.memory = pickle.load( open( "memory_abs{}.p".format(MEMORY_CAPACITY), "rb" ) )
+
+randomAgent = None
+iteration = 1
+env = Environment(viz=False)
+viz_flag = False
+
+print("Starting learning")
+while iteration < trials:
+    reward, update_ep = env.run(agent,viz_flag,ep_id=iteration)
+    iteration += 1
+    avgreward.append(reward)
+    x.append(iteration)
+    avg_reward = np.mean(avgreward)
+    viz_flag = True if avg_reward > -.4 else False
+    y.append(avg_reward)
+    points.set_data(x, y)
+    if len(avgreward) > 10:
+        maxsofar = max(maxsofar,np.mean(avgreward))
+
+    if True:
+        # restore background
+        plt.pause(0.05)
+        fig.canvas.restore_region(background)
+        ax.set_xlim(max(iteration-500,0), iteration+100)
+        ax.set_ylim(-1, 1)
+        rand = plt.plot((0, trials), (-.75, -.75), 'k-')
+        max_.remove()
+        max_, = ax.plot((0, trials), (maxsofar, maxsofar), 'k-', color = 'g')
+        thresh.remove()
+        thresh, = ax.plot((0, trials), (notify_value, notify_value), 'k-', color = 'r')
+        #upep.remove()
+        upep, = ax.plot((update_ep, update_ep), (-1, 1), 'k-', color = 'r')
+        # redraw just the points
+        ax.draw_artist(points)
+        # fill in the axes rectangle
+        fig.canvas.blit(ax.bbox)
     else:
-        #pass
-        # agent.memory = randomAgent.memory
-        agent.memory = pickle.load( open( "memory_abs25000.p", "rb" ) )
+        # redraw everything
+        fig.canvas.draw()
+    if maxsofar >= notify_value and len(avgreward) == 10000:
+        title = "{} Reached".format(notify_value)
+        notify_value = float(input())
+    print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {:.2f}, Max: {:.2f}, Exp: {}".format(iteration,str(np.round(np.mean(avgreward), precision)),str(np.round(reward, precision)), agent.memory.tree.write , MEMORY_CAPACITY, agent.epsilon,maxsofar,agent.exp))
 
-    randomAgent = None
-    iteration = 1
-    env = Environment(viz=False)
-    viz_flag = False
-
-    print("Starting learning")
-    while iteration < trials:
-        reward, update_ep = env.run(agent,viz_flag,ep_id=iteration)
-        iteration += 1
-        avgreward.append(reward)
-        x.append(iteration)
-        avg_reward = np.mean(avgreward)
-        viz_flag = True if avg_reward > 0 else False
-        y.append(avg_reward)
-        points.set_data(x, y)
-        if len(avgreward) > 10:
-            maxsofar = max(maxsofar,np.mean(avgreward))
-
-        if True:
-            # restore background
-            plt.pause(0.05)
-            fig.canvas.restore_region(background)
-            ax.set_xlim(max(iteration-500,0), iteration+100)
-            ax.set_ylim(-1, 1)
-            rand = plt.plot((0, trials), (-.75, -.75), 'k-')
-            max_.remove()
-            max_, = ax.plot((0, trials), (maxsofar, maxsofar), 'k-', color = 'g')
-            thresh.remove()
-            thresh, = ax.plot((0, trials), (notify_value, notify_value), 'k-', color = 'r')
-            #upep.remove()
-            upep, = ax.plot((update_ep, update_ep), (-1, 1), 'k-', color = 'r')
-            # redraw just the points
-            ax.draw_artist(points)
-            # fill in the axes rectangle
-            fig.canvas.blit(ax.bbox)
-        else:
-            # redraw everything
-            fig.canvas.draw()
-        if maxsofar >= notify_value and len(avgreward) == 10000:
-            title = "{} Reached".format(notify_value)
-            notify_value = float(input())
-        print("episode: {}, average reward: {}, Reward: {}, Memory: {}/{}, Epsilon: {:.2f}, Max: {:.2f}, Exp: {}".format(iteration,str(np.round(np.mean(avgreward), precision)),str(np.round(reward, precision)), agent.memory.tree.write , MEMORY_CAPACITY, agent.epsilon,maxsofar,agent.exp))
-
-finally:
-    pass#agent.brain.model.save("Seaquest-DQN-PER.h5")
+# finally:
+#     pass#agent.brain.model.save("Seaquest-DQN-PER.h5")
