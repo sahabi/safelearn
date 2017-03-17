@@ -15,7 +15,7 @@ class deepQNetwork:
         self.model.add(Activation('relu'))
         self.model.add(Dense(40, activation='relu'))
         self.model.add(Dense(40, activation='relu'))
-        #self.model.add(Dense(16, activation='relu'))
+        self.model.add(Dense(16, activation='relu'))
         self.model.add(Dense(noOfActions,activation='linear')) 
         self.model.compile(lr=learningRate, optimizer='rmsprop', loss='mse')
 

@@ -157,7 +157,7 @@ class Experience(object):
             return False, False, False
 
         dist_index = math.floor(self.record_size / self.size * self.partition_num)
-        print(self.record_size / self.size * self.partition_num)
+        # print(self.record_size / self.size * self.partition_num)
         #if dist_index < 1:
         #    print('dist')
         #    return [self._experience[v] for v in self._experience.keys()][:250],1,[v for v in self._experience.keys()][:250]

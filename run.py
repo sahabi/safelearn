@@ -248,7 +248,7 @@ class Environment:
 
 #-------------------- MAIN ----------------------------
 MEMORY_CAPACITY = 50000
-BATCH_SIZE = 20
+BATCH_SIZE = 200
 GAMMA = 0.99
 MAX_EPSILON = 1
 MIN_EPSILON = 0.05
