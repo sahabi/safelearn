@@ -19,7 +19,8 @@ class deepQNetwork:
         self.model.add(Dense(noOfActions,activation='linear')) 
         self.model.compile(lr=learningRate, optimizer='rmsprop', loss='mse')
 
-    def predict(self, states):        
+    def predict(self, states):
+        states = np.reshape(states,(1,1,4))
         return self.model.predict(states,batch_size=1)
 
     def predict_all(self, states):        

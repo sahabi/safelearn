@@ -148,8 +148,11 @@ class Env(object):
             rand_x = random.random()*self.XSIZE
             rand_y = random.random()*self.YSIZE     
         self.currentPos = (.25*self.XSIZE,.1*self.YSIZE)
+        rand_x = 100
+        rand_y = 400
+        self.currentDir = math.pi
+        #self.currentPos = (.25*self.XSIZE,.1*self.YSIZE)
         self.currentPos = (rand_x, rand_y)
-        self.currentDir = math.pi*.5
         self.currentSpeedPerStep = 1.0
         self.currentRotationPerStep = 0.04
         self.iteration += 1
@@ -157,7 +160,8 @@ class Env(object):
         self.viz = viz
         if pygame.display.get_active() and self.viz:
             color = (255*0/8.0,0,0)
-            allActivations = net.predict_all(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS])
+            a = np.reshape(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS],(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS].shape[0],1,4))
+            allActivations = net.predict_all(a)
             for i,(x,y,direcSin,direcCos) in enumerate(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS]):
             #for i,(x,y) in enumerate(self.allPixelsDS[self.displayDirection][iteration % self.NOFPIXELSPLITS]):      
                 arg = argmax(allActivations[i])

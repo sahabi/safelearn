@@ -16,12 +16,27 @@ import matplotlib
 matplotlib.use('TKAgg')
 from matplotlib import pyplot as plt
 import random
-
+from keras.models import load_model
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Flatten
 LEFT = 0
 RIGHT = 1
 MAX_TIMESTEPS = 500
 
-blob = agent(4,[i for i in range(0,8)], epsilon=1)
+blob = agent(4,[i for i in range(0,8)], epsilon=0)
+model = Sequential()
+model.add(Flatten(input_shape=(1,) + (4,)))
+model.add(Dense(16))
+model.add(Activation('relu'))
+model.add(Dense(16))
+model.add(Activation('relu'))
+model.add(Dense(16))
+model.add(Activation('relu'))
+model.add(Dense(8))
+model.add(Activation('linear'))
+model.load_weights('Car_RL_weights.h5f')  # updates V, L and mu model since the weights are shared
+blob.Q_est.model = model
+blob.Q.model = model
 env = env_m.Env()
 #env = wrappers.Monitor(env, '/tmp/cartpole-experiment-v1',force=True)
 notify_value = -1
@@ -58,21 +73,21 @@ pointsQ = ax.plot(xQ, yQ, '-', color='g')[0]
 viz_flag = True
 S_list = []
 q_est_trials = 1000
-for i_episode in range(q_est_trials):
-    print('{}/{}'.format(i_episode,q_est_trials))
-    S = env.reset(blob.Q_est, t, viz_flag)
-    done = False   
-    t = 0
-    tot_R = 0  
-    while not done:
-        t += 1
-        S_list.append(S)
-        A = random.choice([0,1,2,3,4,5,6,7])#blob.act(S)
-        S_dash, R, done = env.step(A)
-        blob.observe(S,A,R,S_dash)
-        #self.Q.predict(state[np.newaxis,:])
-        tot_R += R
-        S = np.copy(S_dash)    
+# for i_episode in range(q_est_trials):
+#     print('{}/{}'.format(i_episode,q_est_trials))
+#     S = env.reset(blob.Q_est, t, viz_flag)
+#     done = False   
+#     t = 0
+#     tot_R = 0  
+#     while not done:
+#         t += 1
+#         S_list.append(S)
+#         A = random.choice([0,1,2,3,4,5,6,7])#blob.act(S)
+#         S_dash, R, done = env.step(A)
+#         blob.observe(S,A,R,S_dash)
+#         #self.Q.predict(state[np.newaxis,:])
+#         tot_R += R
+#         S = np.copy(S_dash)    
 
 for i_episode in range(trials):
     
@@ -82,24 +97,25 @@ for i_episode in range(trials):
     tot_R = 0  
     while not done:
         t += 1
+        #S = np.reshape(S,(1,1,4))
         A = blob.act(S)
         S_dash, R, done = env.step(A)
-        blob.observe(S,A,R,S_dash)
+        #blob.observe(S,A,R,S_dash)
         tot_R += R
         S = np.copy(S_dash)
         
     # every now and then stop, and think things through:
-    if i_episode > 55:
-        blob.reflect(i_episode)
+    #if i_episode > 55:
+    #    blob.reflect(i_episode)
         
     # when the episode ends the agent will have hit a terminal state so give it a zero reward
-    if t < MAX_TIMESTEPS:
-        blob.observe(S,A,0.,None)
-    else:
-        blob.observe(S,A,1.,None)
+    # if t < MAX_TIMESTEPS:
+    #     blob.observe(S,A,0.,None)
+    # else:
+    #     blob.observe(S,A,1.,None)
             
     avgreward.append(tot_R)
-    avg_Q = 100* np.average(np.amax(blob.Q.model.predict(np.array(S_list)), axis=1))
+    avg_Q = 0
     avgQ.append(avg_Q)
     avg_reward = np.mean(avgreward)
     viz_flag = True if avg_reward > -10 else False
@@ -112,7 +128,7 @@ for i_episode in range(trials):
     if len(avgreward) > 10:
         maxsofar = max(maxsofar,np.mean(avgreward))
 
-    if True:
+    if False:
         # restore background
         plt.pause(0.05)
         fig.canvas.restore_region(background)
